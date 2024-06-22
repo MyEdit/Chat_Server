@@ -50,16 +50,11 @@ namespace Chat_Server.Network
 
         private void clientHandler(Socket clientSocket)
         {
-            PacketType packetType;
             while (true)
             {
                 try
                 {
-                    byte[] data = new byte[sizeof(PacketType)];
-                    clientSocket.Receive(data); //Читаем пришедший тип пакета
-
-                    packetType = (PacketType)BitConverter.ToInt32(data, 0); //Конвертируем byte[] в PacketType
-                    packetHandler(packetType, clientSocket); //Переходим в обработчик пакетов
+                    packetHandler(getMessageFromClient<PacketType>(clientSocket), clientSocket); //Переходим в обработчик пакетов
                 }
                 catch (SocketException) //Вызывается при отключении клиента от сервера (Другого способа не нашел, но и не сильно долго искал, в идеале избавиться от try catch)
                 {
@@ -129,9 +124,15 @@ namespace Chat_Server.Network
         //Шаблонная функция чтения пакета от клиента
         public static T getMessageFromClient<T>(Socket clientSocket)
         {
-            byte[] buffer = new byte[Marshal.SizeOf<T>()]; //Создаем набор байтов по размеру типа данных T
-            clientSocket.Receive(buffer); //Читаем и записываем данные из пакета в buffer
+            byte[] buffer;
 
+            //Создаем набор байтов по размеру типа данных T
+            if (typeof(T).IsEnum)
+                buffer = new byte[sizeof(int)];
+            else
+                buffer = new byte[Marshal.SizeOf<T>()];
+
+            clientSocket.Receive(buffer); //Читаем и записываем данные из пакета в buffer
             return byteArrayToObject<T>(buffer); //Кастуем набор байтов в тип данных T и возвращаем его вызывающему
         }
 
